@@ -6,7 +6,8 @@
 #======================================
 #curl -i -X POST -H "Content-Type: multipart/form-data" -F "data=@$FullFileName" "$URL"
 #======================================
-#CALL FORMAT: ./UploadFinal.sh FileName
+#CALL FORMAT: ./UploadWorkingCopy.sh FileName
+#./FileBash.sh /c/xampp/xampp-control.log
 #======================================
 FullFileName=$1
 BaseURL=https://rapidgator.net/api/v2/
@@ -19,7 +20,7 @@ FileName=$(basename $FullFileName)
 #echo $FileName
 #LOGIN REQUEST
 LoginResponse=$(curl "$BaseURL"'user/login?login=YOUR_LOGIN&password=YOUR_PASSWORD'|grep -E 'response')
-#echo $LoginResponse
+echo $LoginResponse
 Status=$(echo $LoginResponse| grep -m1  -oP '\s*"status"\s*:\s*\K[^,]+')
 #echo $Status
 Token=$(echo $LoginResponse| grep -m1 -oP '\s*"token"\s*:\s*"\K[^"]+')
@@ -30,6 +31,7 @@ Token=$(echo $LoginResponse| grep -m1 -oP '\s*"token"\s*:\s*"\K[^"]+')
 	
 #echo "$BaseURL"'file/upload?token='"$Token"'&name='"$FileName"'&hash='"$Hash"'&size='"$FileSize"
 #curl "$BaseURL"'file/upload?token='"$Token"'&hash='"$Hash"'&size='"$FileSize"'&name='"$FileName" -o pavel.txt
+#FileUploadResponse=$(curl "$BaseURL"'file/upload?token='"$Token"'&hash='"$Hash"'&size='"$FileSize"'&name='"$FileName"|grep -E 'response')
 FileUploadResponse=$(curl "$BaseURL"'file/upload?token='"$Token"'&hash='"$Hash"'&size='"$FileSize"'&name='"$FileName"|grep -E 'response')
 echo $FileUploadResponse
 	
@@ -52,15 +54,25 @@ echo $Status
 Details=$(echo $FileUploadResponse| grep -m1 -oP '\s*"details"\s*:\s*"\K[^,}]+')
 echo $Details
 	
-#FileResponse=$(echo '<form method="post" action='"$URL"' enctype="multipart/form-data">''<input type="file" name='"$FullFileName"'/>''</form>')
-	
-#FileResponse=$(curl '-X POST -d ''@'"$FullFileName"' '"$URL")
-#FileResponse=$(curl "-X" "POST" "-d" "@$FullFileName" "$URL")
-#FileResponse=$(curl -k -X POST -H "Content-Type: multipart/form-data" -d "data=@{$FullFileName}" "$URL")
-FileResponse=$(curl -k -d "--data-urlencode data=@{$FullFileName}" -X POST "$URL")
-#FileResponse=$(curl -k -d "file@{$FullFileName}" -X POST "$URL")
-echo $FileResponse	
-	
-echo "$BaseURL"'file/upload_info?token='"$Token"'&file_id='"$FileID";
-FileUploadInfoResponse=$(curl "$BaseURL"'file/upload_info?token='"$Token"'&file_id='"$FileID"|grep -E 'response')
-echo $FileUploadInfoResponse
+#FileResponse=$(echo '<form method="post" action='"$URL"' enctype="multipart/form-data">''<input type="file" name='"file"'/>''</form>')
+if [[ -v $FileID ]]; then
+	FileUploadInfoResponse=$(curl "$BaseURL"'file/upload_info?token='"$Token"'&file_id='"$FileID"|grep -E 'response')
+	echo $FileUploadInfoResponse
+else
+	#FileResponse=$(curl '-X POST -d ''@'"$FullFileName"' '"$URL")
+	#FileResponse=$(curl "-X" "POST" "-d" "@$FullFileName" "$URL")
+	#FileResponse=$(curl -k -X POST -H "Content-Type: multipart/form-data" -d "data=@{$FullFileName}" "$URL")
+	#FileResponse=$(curl -k -d "--data-urlencode data=@{$FullFileName}" "$URL")
+	#FileResponse=$(curl -d "data=@{$FullFileName} {$URL}")
+	FileUploadResponse=$(curl -F "type=file" -F "file=@$FullFileName" "{$URL}"|grep -E 'response')
+	#FileResponse=$(curl -k -d "file@{$FullFileName}" -X POST "$URL")
+	echo $FileUploadResponse	
+	State=$(echo $FileUploadResponse| grep -m1 -oP '\s*"state"\s*:\s*"\K[^,]+')
+	echo $State
+	StateLabel=$(echo $FileUploadResponse| grep -m1 -oP '\s*"state_label"\s*:\s*"\K[^"]+')
+	echo $StateLabel
+	sleep 20
+	echo "$BaseURL"'file/upload_info?token='"$Token"'&upload_id='"$UploadID";
+	FileUploadInfoResponse=$(curl "$BaseURL"'file/upload_info?token='"$Token"'&upload_id='"$UploadID"|grep -E 'response')
+	echo $FileUploadInfoResponse
+fi	
